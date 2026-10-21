@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+html,
+body {
+  background-color: #0b1220;
+  color: #e2e8f0;
+}
+
+/* Subtle radial glow behind the app shell. */
+body {
+  background-image:
+    radial-gradient(900px 500px at 15% -10%, rgba(20, 184, 166, 0.12), transparent),
+    radial-gradient(700px 400px at 100% 0%, rgba(245, 158, 11, 0.08), transparent);
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e2d4d;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-white/10 bg-navy-800/70 backdrop-blur;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg bg-teal px-4 py-2 font-medium text-navy transition hover:bg-teal-soft disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm text-slate-300 transition hover:border-teal/50 hover:text-white;
+  }
+}
