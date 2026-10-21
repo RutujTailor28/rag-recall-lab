@@ -16,12 +16,10 @@ yarn-debug.log*
 yarn-error.log*
 
 # Env & secrets
-.env
-.env.local
 *.local
 
 # OS / editor
 .DS_Store
 .idea/
-.vscode/
 *.swp
+config.bat

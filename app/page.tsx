@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ModeBadge from "@/components/ModeBadge";
 import RetrievalControls from "@/components/RetrievalControls";
 import { runRetrieval, streamAnswer } from "@/lib/mockChat";
@@ -25,8 +25,39 @@ interface Turn {
   streaming: boolean;
 }
 
-// Render an answer, turning [n] markers into teal citation chips.
-function AnswerText({ text }: { text: string }) {
+// The scripted conversation rendered for `?demo=1`: two fully-answered turns
+// and a third caught mid-stream, all produced from the real mock engine so the
+// citations and source cards stay internally consistent.
+const DEMO_QUESTIONS = [
+  "How does Reciprocal Rank Fusion combine rankings?",
+  "What is a cross-encoder reranker?",
+  "Why does chunk overlap matter?",
+];
+
+function buildDemoTurns(config: RetrievalConfig): Turn[] {
+  return DEMO_QUESTIONS.map((question, i) => {
+    const { answer, sources } = runRetrieval(question, config);
+    const isLast = i === DEMO_QUESTIONS.length - 1;
+    if (!isLast) {
+      return { question, config, answer, sources, streaming: false };
+    }
+    // Catch the final answer mid-stream: keep ~60% of the tokens so the UI
+    // shows a partially-streamed response with a blinking cursor.
+    const tokens = answer.match(/\S+\s*/g) ?? [];
+    const cut = Math.max(1, Math.ceil(tokens.length * 0.6));
+    return {
+      question,
+      config,
+      answer: tokens.slice(0, cut).join("").trimEnd(),
+      sources,
+      streaming: true,
+    };
+  });
+}
+
+// Render an answer, turning [n] markers into teal citation chips. When
+// `cursor` is set (an in-flight stream), append a blinking caret.
+function AnswerText({ text, cursor = false }: { text: string; cursor?: boolean }) {
   const parts = text.split(/(\[\d+\])/g);
   return (
     <p className="leading-relaxed text-slate-100">
@@ -41,6 +72,9 @@ function AnswerText({ text }: { text: string }) {
         ) : (
           <span key={i}>{part}</span>
         ),
+      )}
+      {cursor && (
+        <span className="ml-0.5 inline-block h-4 w-[2px] animate-pulse bg-teal align-text-bottom" />
       )}
     </p>
   );
@@ -76,6 +110,17 @@ export default function ChatPage() {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [loading, setLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Static-export safe: read the query string from the browser in an effect
+  // rather than via useSearchParams (which would force a Suspense boundary at
+  // build time). `?demo=1` instantly hydrates a scripted conversation.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("demo") === "1") {
+      setTurns(buildDemoTurns(DEFAULT_CONFIG));
+    }
+  }, []);
 
   function scrollToBottom() {
     requestAnimationFrame(() =>
@@ -158,7 +203,7 @@ export default function ChatPage() {
                   top-k {turn.config.topK} · chunk {turn.config.chunkSize}
                 </span>
               </div>
-              <AnswerText text={turn.answer} />
+              <AnswerText text={turn.answer} cursor={turn.streaming} />
               {!turn.streaming && turn.sources.length > 0 && (
                 <>
                   <div className="mb-2 mt-4 text-xs uppercase tracking-wide text-slate-500">
